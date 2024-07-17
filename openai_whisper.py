@@ -36,6 +36,7 @@ def hit_whisper():
 def delete_audio_file():
   print("Cleaning up the directory ...")
   os.remove(local_audio_path_wav)
+  print("Cleaned the directory!")
 
 
 """
@@ -50,9 +51,11 @@ def transcribe_audio_from_url(blob_url):
 
     # - Pass it to OpenAI Whisper to get txion
     txion = hit_whisper()
-    print(txion)
+    print(f"Transcription generated: \n {txion}")
     
     # - Clean up the downloaded file
     delete_audio_file()
+    
+    return txion
   except Exception as e:
     print(f"An error occurred while transcribing: {e}")
