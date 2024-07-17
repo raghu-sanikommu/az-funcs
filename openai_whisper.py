@@ -41,6 +41,7 @@ def delete_audio_file():
 """
 - Download audio from blob (wav format)
 - Pass it to OpenAI Whisper to get Txion
+- Clean up the downloaded file
 """
 def transcribe_audio_from_url(blob_url):
   try:
