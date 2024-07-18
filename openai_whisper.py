@@ -25,12 +25,15 @@ def hit_whisper():
   start_time = time.time()
   transcription = client.audio.transcriptions.create(
     model="whisper-1", 
-    file=audio_file
+    file=audio_file,
+    response_format="verbose_json",
+    timestamp_granularities=["segment"]
   )
   end_time = time.time()
   print(f"Time taken for txion: {end_time - start_time}")
   audio_file.close()
-  return transcription.text
+  transcription.txion_time = round(end_time - start_time, 2)
+  return transcription
 
 
 def delete_audio_file():
@@ -51,7 +54,7 @@ def transcribe_audio_from_url(blob_url):
 
     # - Pass it to OpenAI Whisper to get txion
     txion = hit_whisper()
-    print(f"Transcription generated: \n {txion}")
+    print("Transcription is done")
     
     # - Clean up the downloaded file
     delete_audio_file()
