@@ -2,17 +2,23 @@ from openai import OpenAI
 import time
 import requests
 import os
-
+import tempfile
 
 import config
+from logger import logger
 
 
 client = OpenAI(api_key=(config.OPENAI_API_KEY))
-local_audio_path_wav = "audios/audio.wav"
+# Though audio in blob is .opus, we save it in .wav coz whisper doesn't support .opus
+tempFilePath = tempfile.gettempdir()
+fp = tempfile.NamedTemporaryFile(suffix=".wav")
+print("Temp file name :: " + fp.name)
+local_audio_path_wav = fp.name # For deployed server
+# local_audio_path_wav = 'audio.wav' # For local server
 
 
 def download_audio_file(blob_url, local_path = local_audio_path_wav):
-  print("Downloading audio file ...")
+  logger.info("Downloading audio file ...")
   response = requests.get(blob_url)
   response.raise_for_status() 
   with open(local_path, 'wb') as file:
@@ -21,7 +27,7 @@ def download_audio_file(blob_url, local_path = local_audio_path_wav):
 
 def hit_whisper():
   audio_file = open(local_audio_path_wav, "rb")
-  print("Txion has started ...")
+  logger.info("Txion has started ...")
   start_time = time.time()
   transcription = client.audio.transcriptions.create(
     model="whisper-1", 
@@ -30,16 +36,16 @@ def hit_whisper():
     timestamp_granularities=["segment"]
   )
   end_time = time.time()
-  print(f"Time taken for txion: {end_time - start_time}")
+  logger.info(f"Time taken for txion: {end_time - start_time}")
   audio_file.close()
   transcription.txion_time = round(end_time - start_time, 2)
   return transcription
 
 
 def delete_audio_file():
-  print("Cleaning up the directory ...")
+  logger.info("Cleaning up the directory ...")
   os.remove(local_audio_path_wav)
-  print("Cleaned the directory!")
+  logger.info("Cleaned the directory!")
 
 
 """
@@ -54,11 +60,11 @@ def transcribe_audio_from_url(blob_url):
 
     # - Pass it to OpenAI Whisper to get txion
     txion = hit_whisper()
-    print("Transcription is done")
+    logger.info("Transcription is done")
     
     # - Clean up the downloaded file
     delete_audio_file()
     
     return txion
   except Exception as e:
-    print(f"An error occurred while transcribing: {e}")
+    logger.info(f"An error occurred while transcribing: {e}")
