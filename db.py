@@ -4,6 +4,7 @@ from bson.objectid import ObjectId
 
 # File Imports
 import config
+from logger import logger
 
 
 class MongoDB:
@@ -27,7 +28,7 @@ class MongoDB:
     try:
       self.collection.update_one({"_id": ObjectId(id)}, {"$set": upsert_data})
     except Exception as e:
-      print(f"An error occured while updating DB: {e}")
+      logger.info(f"An error occured while updating DB: {e}")
 
   
   def find_by_id(self, id):

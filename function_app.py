@@ -1,5 +1,4 @@
 import azure.functions as func
-import logging
 import base64
 import json
 import re
@@ -12,6 +11,7 @@ from az_queue import Queue
 import config
 import gemini_llm
 import sample_txion
+from logger import logger
 
 app = func.FunctionApp()
 
@@ -35,7 +35,7 @@ def q_trigger_audios_to_transcribe(azqueue: func.QueueMessage):
     # - Convert it into json
     json_str = base64.b64decode(base64_str).decode('utf-8')
     json_message = json.loads(json_str)
-    logging.info(f'Queue trigger for {config.Q_AUDIOS_TO_TRANSCRIBE} dequeued a message: {json_message}')
+    logger.info(f'Queue trigger for {config.Q_AUDIOS_TO_TRANSCRIBE} dequeued a message: {json_message}')
     
     # - Extract blobUrl & DB records Id
     blob_url = json_message["blobUrl"]
@@ -65,10 +65,10 @@ def q_trigger_audios_to_transcribe(azqueue: func.QueueMessage):
     queue_client.push({"id": record_id})
     
     # - Exit from queue
-    print(f'Queue trigger for {config.Q_AUDIOS_TO_TRANSCRIBE} finished processing a message: {json_message}')
+    logger.info(f'Queue trigger for {config.Q_AUDIOS_TO_TRANSCRIBE} finished processing a message: {json_message}')
     
   except Exception as e:
-    print(f"An error occurred while processing q-audios-to-transcribe: {e}")
+    logger.info(f"An error occurred while processing q-audios-to-transcribe: {e}")
     
 
 
@@ -91,7 +91,7 @@ def q_trigger_transcriptions_to_analyze(azqueue: func.QueueMessage):
     # - Convert it into json
     json_str = base64.b64decode(base64_str).decode('utf-8')
     json_message = json.loads(json_str)
-    logging.info(f'Queue trigger for {config.Q_TRANSCRIPTIONS_TO_ANALYZE} dequeued a message: {json_message}')
+    logger.info(f'Queue trigger for {config.Q_TRANSCRIPTIONS_TO_ANALYZE} dequeued a message: {json_message}')
     
     # - Extract DB records Id
     record_id = json_message["id"]
@@ -101,7 +101,7 @@ def q_trigger_transcriptions_to_analyze(azqueue: func.QueueMessage):
     db_result = mongo_client.find_by_id(id=record_id)
     txion = db_result["transcription"]
     # txion = sample_txion.sample_txion #! For Debugging
-    print("Fetched txion from DB ...")
+    logger.info("Fetched txion from DB ...")
     
     # - Format txion to pass it for LLM
     sentences_to_llm = [{"id": segment["id"], "text": segment['text']} for segment in txion]
@@ -135,13 +135,13 @@ def q_trigger_transcriptions_to_analyze(azqueue: func.QueueMessage):
       Output: {{ 'segments': ['0_AGNT', '1_CUST', '2_AGNT', '3_AGNT', '4_CUST', '5_AGNT'], 'overall_senitiment': 'positive', 'issue_description': 'Unable to connect to internet', 'resolution_provided': 'Recharge to continue using internet' }}
     """
     
-    print("Hitting LLM ...")
+    logger.info("Hitting LLM ...")
     start_time = time.time()
     analytics_from_llm = gemini_llm.gemini_model.generate_content(llm_prompt).text
     res = re.search(r'```json(.*?)```', analytics_from_llm, re.DOTALL)
     analytics_from_llm = res.group(1).strip()
     analytics_from_llm = json.loads(analytics_from_llm)
-    print("LLM processing is finished.")
+    logger.info("LLM processing is finished.")
     end_time = time.time()
     llm_time = round(end_time - start_time, 2)
     
@@ -177,8 +177,8 @@ def q_trigger_transcriptions_to_analyze(azqueue: func.QueueMessage):
     mongo_client.update_one_by_id(id=record_id, upsert_data=upsert_data)
     
     # - Exit from queue
-    print(f'Queue trigger for {config.Q_TRANSCRIPTIONS_TO_ANALYZE} finished processing a message: {json_message}')
+    logger.info(f'Queue trigger for {config.Q_TRANSCRIPTIONS_TO_ANALYZE} finished processing a message: {json_message}')
     
   except Exception as e:
-    print(f"An error occurred while processing q-transcriptions-to-analyze: {e}")
+    logger.info(f"An error occurred while processing q-transcriptions-to-analyze: {e}")
   
